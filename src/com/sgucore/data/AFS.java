@@ -133,29 +133,29 @@ public class AFS extends Pkg_box {
         return b - ((long[][]) offsets)[ac][0];
     }
 
-    public void writeCopy(WriteSeek outa, boolean names) throws IOException
+    public void writeCopy(Pkg_box src, WriteSeek outa, boolean names) throws IOException
     {
-        if (jindex == null) {
+        if (src.jindex == null) {
             throw new RuntimeException("Error jindex mustbe assigned");
         }
-        jindex.pos = 0;
+        src.jindex.pos = 0;
 
-        final long[][] ofas = new long[jindex.length][2];
-        final long[][] refs = (long[][]) jindex.offs;
+        final long[][] ofas = new long[src.jindex.length][2];
+        final long[][] refs = (long[][]) src.jindex.offs;
         outa.writeNull((int) IOSeekUtil.align((ofas.length + 1) * 8 + 4, 0x800));
         long pox = outa.seek();
         OutputStream os = outa.asOutputStream();
         while (true) {
-            IndexHelper.IEntry ast = jindex.next();
+            IndexHelper.IEntry ast = src.jindex.next();
             if (ast == null) {
                 break;
             }
-            long[] ay = refs == null || jindex.pos > refs.length ? null : refs[jindex.pos - 1];
-            long[] ax = ofas[jindex.pos - 1];
+            long[] ay = refs == null || src.jindex.pos > refs.length ? null : refs[src.jindex.pos - 1];
+            long[] ax = ofas[src.jindex.pos - 1];
             ax[0] = pox;
             if (!(ast instanceof IndexHelper.SEntry)) {
                 ax[1] += ax[0] + (ay[1] - ay[0]);
-                readFile(jindex.pos - 1).exportRaw(outa);
+                src.readFile(src.jindex.pos - 1).exportRaw(outa);
                 outa.writeNull((int) IOSeekUtil.alignMod(outa.seek(), 0x800));
                 pox = outa.seek();
                 continue;
@@ -174,9 +174,9 @@ public class AFS extends Pkg_box {
             pox = outa.seek();
         }
         if (names) {
-            jindex.pos = 0;
+            src.jindex.pos = 0;
             while (true) {
-                IndexHelper.IEntry ast = jindex.next();
+                IndexHelper.IEntry ast = src.jindex.next();
                 if (ast == null) {
                     break;
                 }
@@ -194,7 +194,7 @@ public class AFS extends Pkg_box {
         }
         outa.seek(0);
         outa.write4be(0x41465300);
-        outa.write4le(jindex.length);
+        outa.write4le(src.jindex.length);
         for (long[] x : ofas) {
             outa.write4le((int) x[0]);
             outa.write4le((int) (x[1] - x[0]));

@@ -8,6 +8,7 @@ import com.DeltaSKR.IO.interfce.IOSys;
 import com.DeltaSKR.IO.interfce.WriteSeek;
 import com.sgucore.MainApp;
 import com.sgucore.data.AFS;
+import com.sgucore.data.ISO_Root;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.event.ActionEvent;
@@ -62,7 +63,13 @@ public class MainGui extends javax.swing.JFrame {
                     return;
                 }
                 int[] rows = cat.jTable1.getSelectedRows();
+                kas:
                 if (rows.length > 0) {
+                    //fix out of bounds exception
+                    if (rows.length == 1 && (rows[0] < 0 || rows[0] >= cat.jTable1.getRowCount())) {
+                        rows = null;
+                        break kas;
+                    }
                     for (int i = 0; i < rows.length; i++) {
                         rows[i] = cat.jTable1.convertRowIndexToModel(rows[i]);
                     }
@@ -154,7 +161,7 @@ public class MainGui extends javax.swing.JFrame {
         jToolBar1 = new javax.swing.JToolBar();
         jPanel2 = new javax.swing.JPanel();
         jProgressBar1 = new javax.swing.JProgressBar();
-        jLabel1 = new javax.swing.JLabel();
+        StatusMessage = new javax.swing.JLabel();
         jMenuBar1 = new javax.swing.JMenuBar();
         jMenu1 = new javax.swing.JMenu();
         jMenuItem7 = new javax.swing.JMenuItem();
@@ -167,13 +174,6 @@ public class MainGui extends javax.swing.JFrame {
         setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
         setMinimumSize(new java.awt.Dimension(650, 420));
         setSize(new java.awt.Dimension(650, 420));
-        addKeyListener(new java.awt.event.KeyAdapter()
-        {
-            public void keyReleased(java.awt.event.KeyEvent evt)
-            {
-                formKeyReleased(evt);
-            }
-        });
 
         jSplitPane1.setOneTouchExpandable(true);
 
@@ -197,8 +197,8 @@ public class MainGui extends javax.swing.JFrame {
         jProgressBar1.setPreferredSize(new java.awt.Dimension(146, 20));
         jPanel2.add(jProgressBar1, java.awt.BorderLayout.WEST);
 
-        jLabel1.setText("jLabel1");
-        jPanel2.add(jLabel1, java.awt.BorderLayout.CENTER);
+        StatusMessage.setText("jLabel1");
+        jPanel2.add(StatusMessage, java.awt.BorderLayout.CENTER);
 
         getContentPane().add(jPanel2, java.awt.BorderLayout.SOUTH);
 
@@ -252,18 +252,16 @@ public class MainGui extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-
-    private void formKeyReleased(java.awt.event.KeyEvent evt)//GEN-FIRST:event_formKeyReleased
-    {//GEN-HEADEREND:event_formKeyReleased
-        System.out.println(evt);
-
-    }//GEN-LAST:event_formKeyReleased
     static final JFileChooser cas = new JFileChooser();
 
     static {
         if (MainApp.prefs.get("curDir", null) != null) {
             cas.setCurrentDirectory(new File(MainApp.prefs.get("curDir", null)));
         }
+        cas.setAcceptAllFileFilterUsed(false);
+        cas.addChoosableFileFilter(new FileNameExtensionFilter("AFS Aseet File System", "afs"));
+        cas.addChoosableFileFilter(new FileNameExtensionFilter("ISO-9660 Raw CD/DVD Image File System", "iso"));
+        cas.setMultiSelectionEnabled(false);
         cas.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e)
@@ -274,9 +272,8 @@ public class MainGui extends javax.swing.JFrame {
     }
     private void jMenuItem7ActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_jMenuItem7ActionPerformed
     {//GEN-HEADEREND:event_jMenuItem7ActionPerformed
-        cas.setFileFilter(new FileNameExtensionFilter("AFS/ISO", "afs", "iso"));
+        StatusMessage.setText("Open file...");
         cas.setFileSelectionMode(JFileChooser.FILES_ONLY);
-        cas.setMultiSelectionEnabled(false);
         if (cas.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             jProgressBar1.setIndeterminate(true);
             new Thread() {
@@ -291,10 +288,11 @@ public class MainGui extends javax.swing.JFrame {
                         try {
                             setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
                             as = cas.getSelectedFile();
-                            res = PkgCtrl.open(as);
+                            res = PkgCtrl.open(as, ((FileNameExtensionFilter) cas.getFileFilter()).getExtensions()[0]);
                             ax = true;
                         }
                         catch (Exception e) {
+                            StatusMessage.setText("Error: " + e.getMessage());
                             e.printStackTrace();
                             res = null;
                         }
@@ -313,12 +311,12 @@ public class MainGui extends javax.swing.JFrame {
                 }
 
             }.start();
-
         }
     }//GEN-LAST:event_jMenuItem7ActionPerformed
 
     private void jMenuItem1ActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_jMenuItem1ActionPerformed
     {//GEN-HEADEREND:event_jMenuItem1ActionPerformed
+        StatusMessage.setText("Creating new file...");
         IndexHelper.IEntry it = new IndexHelper.IEntry();
         it.code = 0x41465300;
         it.modifier = Pkg_box.TYPE_DIR;
@@ -332,10 +330,13 @@ public class MainGui extends javax.swing.JFrame {
         if (jTabbedPane1.getSelectedComponent() == null) {
             return;
         }
-        PkgCtrl ca = (PkgCtrl) jTabbedPane1.getSelectedComponent();
-        File old = ca.stc;
-        boolean exists = false;
+        StatusMessage.setText("Saving file...");
+        final int tim = jTabbedPane1.getSelectedIndex();
+        final PkgCtrl ca = (PkgCtrl) jTabbedPane1.getSelectedComponent();
+        final File[] old = {ca.stc};
+        final boolean[] exists = {false};
         if (ca.stc == null) {
+            cas.setSelectedFile(new File(cas.getCurrentDirectory(), jTabbedPane1.getTitleAt(tim)));
             if (cas.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
                 ca.stc = cas.getSelectedFile();
             }
@@ -345,6 +346,7 @@ public class MainGui extends javax.swing.JFrame {
                     JOptionPane.YES_NO_CANCEL_OPTION
             )) {
                 case JOptionPane.NO_OPTION:
+                    ca.stc = new File(ca.stc.getParentFile(), IOSys.setExt(ca.stc.getName(), ((FileNameExtensionFilter) cas.getFileFilter()).getExtensions()[0], true));
                     if (cas.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
                         ca.stc = cas.getSelectedFile();
                     }
@@ -352,78 +354,102 @@ public class MainGui extends javax.swing.JFrame {
                 case JOptionPane.CANCEL_OPTION:
                     return;
                 case JOptionPane.YES_OPTION:
-                    exists = true;
+                    exists[0] = true;
                     ca.stc = new File(ca.stc.getParentFile(), "__-TMP-__.bin");
                     break;
             }
         }
-
-        try {
-            jProgressBar1.setIndeterminate(true);
-            IOSys.delete(ca.stc);
-            IndexHelper.IEntry rups = ca.ax.getIEntry();
-            Pkg_box root = ca.ax.getRoot();
-            try {
-                if (old != null && old.exists()) {
-                    root.setIO(IOSys.openRandom(old, true));
-                    if (!root.isValid(-1)) {
-                        JOptionPane.showMessageDialog(this, "ERROR: Cant parse the original data");
-                        return;
-                    }
-                }
+        jProgressBar1.setIndeterminate(true);
+        new Thread() {
+            @Override
+            public void run()
+            {
                 try {
-                    root.jindex = rups;
-                    WriteSeek osta = IOSys.openRandom(ca.stc, false);
+                    if (!exists[0]) {
+                        ca.stc = new File(ca.stc.getParentFile(), IOSys.setExt(ca.stc.getName(), ((FileNameExtensionFilter) cas.getFileFilter()).getExtensions()[0], true));
+                    }
+                    IOSys.delete(ca.stc);
+                    IndexHelper.IEntry rups = ca.ax.getIEntry();
+                    Pkg_box root = ca.ax.getRoot();
+                    Pkg_box outa = root instanceof AFS && ((FileNameExtensionFilter) cas.getFileFilter()).getExtensions()[0].equals("afs")
+                            ? root : new ISO_Root(null);
                     try {
-                        root.writeCopy(osta, true);
+                        if (old[0] != null && old[0].exists()) {
+                            root.setIO(IOSys.openRandom(old[0], true));
+                            if (!root.isValid(-1)) {
+                                JOptionPane.showMessageDialog(MainGui.this, "ERROR: Cant parse the original data");
+                                return;
+                            }
+                        }
+                        try {
+                            root.jindex = rups;
+                            WriteSeek osta = IOSys.openRandom(ca.stc, false);
+                            try {
+                                outa.writeCopy(root, osta, true);
+                            }
+                            finally {
+                                osta.close();
+                            }
+                            if (exists[0] && old != null) {
+                                System.out.println("replacing backup");
+                                File am = new File(old[0].getParentFile(), IOSys.addExt(old[0].getName(), "bak", true));
+                                if (am.exists()) {
+                                    IOSys.delete(am);
+                                }
+                                old[0].renameTo(am);
+                                IOSys.delete(old[0]);
+                                ca.stc.renameTo(old[0]);
+                                ca.stc = old[0];
+                            }
+                        }
+                        finally {
+                            if (root.getFi() != null && old[0] != null && old[0].exists()) {
+                                root.getFi().close();
+                            }
+                        }
+                        rups.pos = 0;
+                        while (true) {
+                            IndexHelper.IEntry ast = rups.next();
+                            if (ast == null) {
+                                break;
+                            }
+                            if (ast instanceof IndexHelper.SEntry) {
+                                rups.set(rups.pos - 1, new IndexHelper.IEntry(ast));
+                            }
+                        }
+                        rups.offs = root.offsets;
+                        root.offsets = null;
+                        old[0] = ca.stc;
+                        ca.ax.setRoot(outa);
+                        SwingUtilities.invokeLater(new Runnable() {
+                            @Override
+                            public void run()
+                            {
+                                ca.jTable1.updateUI();
+                                jTabbedPane1.setTitleAt(tim, ca.stc.getName());
+                                jTabbedPane1.setToolTipTextAt(tim, ca.stc.getPath());
+                                StatusMessage.setText("Saving done!");
+                            }
 
+                        });
+
+                    }
+                    catch (Exception ex) {
+                        ex.printStackTrace();
+                        JOptionPane.showMessageDialog(MainGui.this, "Error:" + ex.getMessage());
                     }
                     finally {
-                        osta.close();
-                    }
-                    if (exists && old != null) {
-                        System.out.println("replacing backup");
-                        File am = new File(old.getParentFile(), IOSys.addExt(old.getName(), "bak", true));
-                        if (am.exists()) {
-                            IOSys.delete(am);
-                        }
-                        old.renameTo(am);
-                        IOSys.delete(old);
-                        ca.stc.renameTo(old);
+                        ca.stc = old[0];//revert to original
                     }
                 }
                 finally {
-                    if (old != null && old.exists()) {
-                        root.getFi().close();
-                    }
+                    System.out.println("END save opration");
+                    jProgressBar1.setIndeterminate(false);
+                    jProgressBar1.setValue(100);
                 }
-                rups.pos = 0;
-                while (true) {
-                    IndexHelper.IEntry ast = rups.next();
-                    if (ast == null) {
-                        break;
-                    }
-                    if (ast instanceof IndexHelper.SEntry) {
-                        rups.set(rups.pos - 1, new IndexHelper.IEntry(ast));
-                    }
-                }
-                rups.offs = root.offsets;
-                root.offsets = null;
-                ca.jTable1.updateUI();
-                old = ca.stc;
             }
-            catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Error:" + ex.getMessage());
-                ex.printStackTrace();
-            }
-            finally {
-                ca.stc = old;//revert to original
-            }
-        }
-        finally {
-            jProgressBar1.setIndeterminate(false);
-            jProgressBar1.setValue(100);
-        }
+
+        }.start();
     }//GEN-LAST:event_jMenuItem2ActionPerformed
 
     /**
@@ -468,7 +494,7 @@ public class MainGui extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel StatusMessage;
     private javax.swing.JMenu jMenu1;
     private javax.swing.JMenu jMenu2;
     private javax.swing.JMenuBar jMenuBar1;

@@ -37,19 +37,28 @@ import javax.swing.table.TableCellRenderer;
  */
 public class PkgCtrl extends javax.swing.JPanel {
 
-    public final static Object[] open(File file)
+    public final static Object[] open(File file, String ext)
     {
         try {
             RndAccess a = IOSys.openRandom(file, true);
             try {
-                Pkg_box iso = new ISO_Root(null);
-                iso.setIO(a);
-                if (!iso.isValid(-1)) {
+                Pkg_box iso;
+                if (ext.equals("afs")) {
                     iso = new AFS(null);
                     iso.setIO(a);
                     if (!iso.isValid(-1)) {
                         throw new IOException("Error invalid file");
                     }
+                }
+                else if (ext.equals("iso")) {
+                    iso = new ISO_Root(null);
+                    iso.setIO(a);
+                    if (!iso.isValid(-1)) {
+                        throw new IOException("Error invalid file");
+                    }
+                }
+                else {
+                    throw new IOException("unsupported file type");
                 }
                 IndexHelper.IEntry entry = new IndexHelper.IEntry(1);
                 iso.printOffset(entry, iso.getCType(), false, false);
@@ -76,13 +85,19 @@ public class PkgCtrl extends javax.swing.JPanel {
         @Override
         public int getSelected()
         {
-            return jTable1.getSelectedRow();
+            return jTable1.convertColumnIndexToModel(jTable1.getSelectedRow());
         }
 
         @Override
         public int[] getSelecteds()
         {
-            return fixSelection(jTable1.getSelectedRows());
+            int[] jc = jTable1.getSelectedRows();
+            if (jc != null) {
+                for (int c = 0; c < jc.length; c++) {
+                    jc[c] = jTable1.convertColumnIndexToModel(jc[c]);
+                }
+            }
+            return fixSelection(jc);
         }
 
         @Override
@@ -112,7 +127,6 @@ public class PkgCtrl extends javax.swing.JPanel {
         protected void updateHistory(PrimitiveList<InterfaceExplorer.PathItem[]> path, int cur)
         {
             navBar2.updatePath(path, cur, ata);
-
         }
     };
     final DataTable tableref = new DataTable();
@@ -283,8 +297,8 @@ public class PkgCtrl extends javax.swing.JPanel {
                 return (a != null ? a : "").compareTo(b != null ? b : "");
             }
         });
-        ak.setSortable(3, false);
-        ak.setSortable(4, false);
+        ak.setSortable(3, true);
+        ak.setSortable(4, true);
         ak.setSortable(5, false);
         jTable1.getColumnModel().setColumnSelectionAllowed(false);
         ColumnSetter cs = new ColumnSetter();

@@ -67,7 +67,7 @@ public abstract class Pkg_box extends Pkg_base {
         };
     }
 
-    public void writeCopy(WriteSeek outa, boolean names) throws IOException
+    public void writeCopy(Pkg_box src, WriteSeek outa, boolean names) throws IOException
     {
         throw new RuntimeException("Error unsupported WriteCopy yet");
     }

@@ -57,9 +57,7 @@ public class DataRender extends DefaultTableCellRenderer {
 
         }
         catch (Exception ex) {
-
         }
-
     }
     private PkgCtrl parent;
     final Border osk = new LineBorder(Color.MAGENTA, 3);
@@ -124,6 +122,11 @@ public class DataRender extends DefaultTableCellRenderer {
             return this;
         }
         setHorizontalAlignment(SwingConstants.LEFT);
+        if (value instanceof Long) {
+            setHorizontalAlignment(SwingConstants.RIGHT);
+            setText(String.format("%08X", value));
+            return this;
+        }
         if (value instanceof IndexHelper.IEntry) {
             IndexHelper.IEntry dat = (IndexHelper.IEntry) value;
 

@@ -8,7 +8,6 @@ package main_app;
 import com.DeltaSKR.lang.ArrayUtil;
 import com.DeltaSKR.lang.PrimitiveList;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -121,6 +120,11 @@ public abstract class InterfaceExplorer implements List {
             }
         }
         return selectedIndex;
+    }
+
+    public void setRoot(Pkg_box outa)
+    {
+        this.root = outa;
     }
 
     public static class PathItem {
@@ -704,7 +708,7 @@ public abstract class InterfaceExplorer implements List {
         final int[] bim = new int[3];
         final IndexHelper.DVFor pest = new IndexHelper.DVFor() {
             @Override
-            public boolean onValue(ArrayList<IndexHelper.VEntry> scope, int index) throws Exception
+            public boolean onValue(List<IndexHelper.VEntry> scope, int index) throws Exception
             {
 //                System.out.println(index);
                 if (bim[2] != index) {
@@ -765,7 +769,7 @@ public abstract class InterfaceExplorer implements List {
             try {
                 IndexHelper.forTree(et.vdir, false, new IndexHelper.DVFor() {
                     @Override
-                    public boolean onValue(ArrayList<IndexHelper.VEntry> scope, int i) throws Exception
+                    public boolean onValue(List<IndexHelper.VEntry> scope, int i) throws Exception
                     {
                         if (lit[0] != i) {
                             return true;

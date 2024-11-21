@@ -17,6 +17,7 @@ import java.io.IOException;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.List;
 
 import parsers.BasicFile;
 import parsers.Pkg_box;
@@ -890,7 +891,7 @@ public final class IndexHelper {
         final String[] ces = {null};
         forTree(tree, false, new DVFor() {
             @Override
-            public boolean onValue(ArrayList<VEntry> scope, int index) throws Exception
+            public boolean onValue(List<VEntry> scope, int index) throws Exception
             {
                 if (index != file) {
                     return true;
@@ -1017,7 +1018,7 @@ public final class IndexHelper {
 
     public static String getPathFromScope(Object scope, String name)
     {
-        ArrayList<VEntry> scp = (ArrayList) scope;
+        List<VEntry> scp = (List) scope;
         StringBuffer buf = new StringBuffer();
         for (int i = 1; i < scp.size(); i++) {
             buf.append(scp.get(i).desc).append('/');
@@ -1033,7 +1034,7 @@ public final class IndexHelper {
          * @return if true continue fetching else break
          * @throws Exception
          */
-        public boolean onValue(ArrayList<VEntry> scope, int index) throws Exception;
+        public boolean onValue(List<VEntry> scope, int index) throws Exception;
 
     }
 

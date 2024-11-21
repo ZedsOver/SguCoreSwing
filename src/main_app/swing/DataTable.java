@@ -58,7 +58,55 @@ public class DataTable extends AbstractTableModel {
     @Override
     public Object getValueAt(int rowIndex, int columnIndex)
     {
-        return dax == null ? null : dax.get(rowIndex);
+        if (dax == null) {
+            return null;
+        }
+        final Object a = dax.get(rowIndex);
+        if (columnIndex < 3 || columnIndex > 4 || a == null) {
+            return a;
+        }
+        if (a.getClass() == IndexHelper.IEntry.class) {
+            final Object ofas = dax.getPIEntry().offs;
+            if (ofas instanceof long[]) {
+                switch (columnIndex) {
+                    case 3://offset
+                        return ((long[]) ofas)[rowIndex];
+                    case 4://size 
+                        final long[] ax = (long[]) ofas;
+                        return ax[rowIndex + 1] - ax[rowIndex];
+                }
+            }
+            else if (ofas instanceof long[][]) {
+                switch (columnIndex) {
+                    case 3://offset
+                        return ((long[][]) ofas)[rowIndex][0];
+                    case 4://size 
+                        final long[] ax = ((long[][]) ofas)[rowIndex];
+                        return ax[1] - ax[0];
+                }
+            }
+            else {
+                return 0L;
+            }
+
+        }
+        else if (a instanceof IndexHelper.SEntry) {
+            switch (columnIndex) {
+                case 3://offset
+                    return 0L;
+                case 4://size 
+                    return ((IndexHelper.SEntry) a).size;
+            }
+        }
+        else {
+            switch (columnIndex) {
+                case 3://offset
+                    return 0L;
+                case 4://size 
+                    return (long) ((IndexHelper.VEntry) a).length;
+            }
+        }
+        return a;
     }
 
     @Override
