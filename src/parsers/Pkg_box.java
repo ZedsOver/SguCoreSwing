@@ -805,11 +805,6 @@ public abstract class Pkg_box extends Pkg_base {
         }
     }
 
-    public void writeIDX(RndAccess w, int index, long newSize, long newCmpSize) throws IOException
-    {
-
-    }
-
     protected final void writeIDX89(RndAccess w, Object p, int[] sels, int sz1, int p2, int sz2, boolean raw) throws IOException
     {
         if (raw && sz2 - p2 == 0 && offsets instanceof long[][]) {
@@ -1317,26 +1312,6 @@ public abstract class Pkg_box extends Pkg_base {
         }
     }
 
-    public long sizeOf(int in)
-    {
-        if (in < 0 || in >= count) {
-            return -1;
-        }
-//        System.out.println(getClass().getName());
-        if (offsets instanceof long[][]) {
-            long off_siz_real[][] = (long[][]) this.offsets;
-//            System.out.printf("SZ1 %10s %10s\n", Long.toHexString(off_siz_real[in][0]), Long.toHexString(off_siz_real[in][1]));
-            return off_siz_real[in][1] - off_siz_real[in][0];
-        }
-        else if (offsets instanceof long[]) {
-            long index[] = (long[]) this.offsets;
-//            System.out.printf("SZ2 %10s %10s\n", Long.toHexString(index[in]), Long.toHexString(index[in + 1]));
-            return index[in + 1] - index[in];
-        }
-        else {
-            throw new RuntimeException("Object offsets not valid " + offsets);
-        }
-    }
 
     public int currentIndex()
     {

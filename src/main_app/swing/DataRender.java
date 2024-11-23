@@ -60,7 +60,8 @@ public class DataRender extends DefaultTableCellRenderer {
         }
     }
     private PkgCtrl parent;
-    final Border osk = new LineBorder(Color.MAGENTA, 3);
+    final Border NEEDRZ = new LineBorder(Color.MAGENTA, 3);
+    final Border INBOUNDS = new LineBorder(Color.GREEN, 3);
 
     public DataRender(PkgCtrl parent)
     {
@@ -144,7 +145,7 @@ public class DataRender extends DefaultTableCellRenderer {
                     break;
                 case 2://NAME
                     if (value instanceof IndexHelper.SEntry) {
-                        setBorder(osk);
+                        setBorder(((IndexHelper.SEntry) value).needRsz?NEEDRZ:INBOUNDS);
                     }
                     setText(dat.desc);
                     break;

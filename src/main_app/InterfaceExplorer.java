@@ -7,6 +7,7 @@ package main_app;
 
 import com.DeltaSKR.lang.ArrayUtil;
 import com.DeltaSKR.lang.PrimitiveList;
+import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Iterator;
@@ -440,7 +441,7 @@ public abstract class InterfaceExplorer implements List {
             iti[iti.length - a++] = e;
         }
         //prevent possible null pointer error
-        dst = cc == null ? path0.length - 1 : vap.indexOf(cc);//recalc destiny location
+        dst = cc == null ? path0.length : vap.indexOf(cc);//recalc destiny location
 
         vap.growBy(sels.length);//grow internal cap size
         System.arraycopy(vap.subs, dst, vap.subs, dst + sels.length, vap.length - dst);
@@ -928,6 +929,51 @@ public abstract class InterfaceExplorer implements List {
         catch (Exception ex) {
         }
         return null;
+    }
+    public int needRzCount = 0;
+    public int replaceCount = 0;
+
+    public boolean needResizeChanges()
+    {
+        return needRzCount > 0;
+    }
+
+    public void applyReplaceChanges() throws IOException
+    {
+        applyReplaceChanges(this.root, cuPath.elements[0].elem);
+    }
+
+    public void applyReplaceChanges(Pkg_base bam, IndexHelper.IEntry e) throws IOException
+    {
+        bam.jindex = e;
+        PrimitiveList.ListObject<IndexHelper.IEntry> stack = PrimitiveList.newFrom(IndexHelper.IEntry.class);
+        stack.addO(cuPath.elements[0].elem);
+        e.pos = 0;
+        while (true) {
+            IndexHelper.IEntry et = e.next();
+            if (et == null) {
+                break;
+            }
+            if (et instanceof IndexHelper.SEntry) {
+                if (((IndexHelper.SEntry) et).needRsz) {
+                    continue;
+                }
+                BasicFile a = bam.readFile(e.pos - 1);
+                a.setEndOffset(a.getBeginOffset() + bam.genMax(bam.sizeOf(e.pos - 1), e.pos - 1));
+                a.importData(bam.getFi(), ((File) ((IndexHelper.SEntry) et).source).getPath(), e.pos - 1, true, false);
+                if (bam.offsets instanceof long[][]) {
+                    long[] ox = ((long[][]) bam.offsets)[e.pos - 1];
+                    ox[1] = ox[0] + a.seek();
+                }
+                bam.writeIDX(bam.getFi(), e.pos - 1, a.seek(), -1);
+                e.subs[e.pos - 1] = et.isrc;
+                replaceCount--;
+            }
+            else if (et.length > 0) {
+                applyReplaceChanges((Pkg_base) bam.loadFile(e.pos - 1), et);
+            }
+        }
+        e.offs = bam.offsets;
     }
 
     //<editor-fold defaultstate="collapsed" desc="Dont used METHODS">

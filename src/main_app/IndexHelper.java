@@ -207,6 +207,24 @@ public final class IndexHelper {
             subs[length++] = e;
         }
 
+        /**
+         *
+         * @param of
+         * @param e
+         */
+        public void add(int of, T e)
+        {
+            if (useBuff) {
+                if (length >= subs.length) {
+                    growBy(1);
+                }
+            }
+            else {
+                subs = (T[]) ArrayUtil.increaseArraySize(subs, length, 1);
+            }
+            ArrayUtil.insert(subs, length++, of, e);
+        }
+
         public T get(int i)
         {
             return i < 0 || i >= length ? null : subs[i];
@@ -296,6 +314,8 @@ public final class IndexHelper {
 
         public Object source;//source data FILE|from other instance
         public long size;
+        public boolean needRsz = true;
+        public boolean isrep = false;
 
         public SEntry(File its)
         {
@@ -323,6 +343,7 @@ public final class IndexHelper {
         public String desc;
         public Object offs;
         public VEntry vdir;
+        public IEntry isrc;
 
         public IEntry()
         {

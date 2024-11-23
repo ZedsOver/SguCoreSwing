@@ -6,7 +6,6 @@ import com.DeltaSKR.IO.interfce.SeekByteArray;
 import com.DeltaSKR.lang.DByteArray;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -153,6 +152,7 @@ public class ISO {
         public final BytePointer buff = new BytePointer(2048);
         public final BytePointer root_record = new BytePointer(QMS_BLOCK_SIZE);
         public quickiso_entry_t root;
+        public int virtAlign = 0x800;
         public short current_id;
         public long currentFilePosition;
         private OutputStream out;
@@ -328,19 +328,18 @@ public class ISO {
         return len;
     }
 
-    public static int quickiso_padding(quickiso_ctx_t ctx, long size) throws IOException
+    public static int quickiso_padding(quickiso_ctx_t ctx, quickiso_entry_t file) throws IOException
     {
-        long diff;
-
         if (ctx == null || ctx.out == null) {
             return -1;
         }
-
-        diff = size % 2048;
+        int diff = (int) align((file.sector * 0x800 + file.size), ctx.virtAlign);
         if (diff != 0) {
-            diff = 2048 - diff;
-            memset(ctx.buff, 0, (int) diff);
-            ctx.out.write(ctx.buff.data, ctx.buff.pointer, (int) diff);
+            memset(ctx.buff, 0, Math.min(2048, diff));
+            while (diff > 0) {
+                ctx.out.write(ctx.buff.data, ctx.buff.pointer, diff < 2048 ? diff : 2048);
+                diff -= 2048;
+            }
         }
         return 0;
     }
@@ -540,7 +539,9 @@ public class ISO {
         else {
             e.sector = ctx.currentFilePosition / 2048;
             quickiso_putxx(so, (int) e.sector, 32, 0);
-            ctx.currentFilePosition += e.size + align(e.size);
+            ctx.currentFilePosition
+                    = ctx.currentFilePosition + e.size
+                    + align(ctx.currentFilePosition + e.size, ctx.virtAlign);
         }
 
         ctx.fd.write(so.data, so.pointer, 8);
@@ -574,13 +575,13 @@ public class ISO {
         return 0;
     }
 
-    static long align(long size)
+    static long align(long size, final int align)
     {
-        size = size % 2048;
+        size = size % align;
         if (size <= 0) {
             return 0;
         }
-        return 2048 - size;
+        return align - size;
     }
 
     public static int quickiso_write_table(quickiso_ctx_t ctx, quickiso_entry_t entry, short id, int endian) throws IOException
@@ -662,7 +663,7 @@ public class ISO {
             //fix sequence of files
             entry.sector = ctx.currentFilePosition / 2048;// (int) (ctx.fd.getFilePointer() / 2048);
             entry.size = size;
-            ctx.currentFilePosition += size + align(size);
+            ctx.currentFilePosition = (ctx.currentFilePosition + size) + align(ctx.currentFilePosition + size, ctx.virtAlign);
         }
         entry.flags = (byte) flags;
 
@@ -983,7 +984,7 @@ public class ISO {
             else {
                 fi.writeInput(ctx.out);//handled by user
             }
-            quickiso_padding(ctx, fi.size());
+            quickiso_padding(ctx, file);
         }
     }
 

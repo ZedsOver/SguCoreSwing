@@ -9,6 +9,7 @@ import javax.swing.table.AbstractTableModel;
 import main_app.IndexHelper;
 import main_app.InterfaceExplorer;
 import parsers.BasicFile;
+import parsers.Pkg_box;
 
 /**
  *
@@ -66,6 +67,8 @@ public class DataTable extends AbstractTableModel {
             return a;
         }
         if (a.getClass() == IndexHelper.IEntry.class) {
+            //fix size info
+            rowIndex = dax.getRealIndex(rowIndex);
             final Object ofas = dax.getPIEntry().offs;
             if (ofas instanceof long[]) {
                 switch (columnIndex) {
@@ -93,6 +96,16 @@ public class DataTable extends AbstractTableModel {
         else if (a instanceof IndexHelper.SEntry) {
             switch (columnIndex) {
                 case 3://offset
+                    if (((IndexHelper.SEntry) a).isrep) {
+                        rowIndex = dax.getRealIndex(rowIndex);
+                        final Object ofas = dax.getPIEntry().offs;
+                        if (ofas instanceof long[]) {
+                            return ((long[]) ofas)[rowIndex];
+                        }
+                        else if (ofas instanceof long[][]) {
+                            return ((long[][]) ofas)[rowIndex][0];
+                        }
+                    }
                     return 0L;
                 case 4://size 
                     return ((IndexHelper.SEntry) a).size;
@@ -179,12 +192,13 @@ public class DataTable extends AbstractTableModel {
         IndexHelper.VEntry ve = dax.getPVEntry();
         for (File a : files) {
             if (ve != null) {
-                ve.add(oe.length);
+                ve.add(index, oe.length);
             }
             IndexHelper.IEntry ka = new IndexHelper.SEntry(a);
             ka.code = 0x42494e00;
             ka.modifier |= IndexHelper.UNK | BasicFile.TYPE_BIN;
             oe.add(ka);
+            dax.needRzCount++;
         }
         super.fireTableDataChanged();
     }
@@ -194,13 +208,14 @@ public class DataTable extends AbstractTableModel {
     {
         IndexHelper.VEntry ve = dax.getPVEntry();
         IndexHelper.IEntry oe = dax.getPIEntry();
-        if (files.length > 1) {
+        duck:
+        if (files.length > 0) {
             if (ve == null) {
-                return false;
+                break duck;
             }
             Object ax = ve.get(index);
             if (!(ax instanceof IndexHelper.VEntry)) {
-                return false;
+                break duck;
             }
             ve = (IndexHelper.VEntry) ax;
             for (File a : files) {
@@ -209,16 +224,72 @@ public class DataTable extends AbstractTableModel {
                 ka.code = 0x42494e00;
                 ka.modifier |= IndexHelper.UNK | BasicFile.TYPE_BIN;
                 oe.add(ka);
+                dax.needRzCount++;
             }
             return true;
         }
         if (files.length != 1) {
             return false;
         }
-        IndexHelper.IEntry ka = new IndexHelper.SEntry(files[0]);
-        ka.code = 0x42494e00;
-        ka.modifier |= IndexHelper.UNK | BasicFile.TYPE_BIN;
-        oe.set(index, ka);
+        IndexHelper.IEntry src = (IndexHelper.IEntry) dax.get(index);
+
+        if (src instanceof IndexHelper.SEntry) {
+            ((IndexHelper.SEntry) src).source = files[0];
+            ((IndexHelper.SEntry) src).size = files[0].length();
+            if (((IndexHelper.SEntry) src).isrep) {//retain original name if is a replacing
+                IndexHelper.setName(src, ((IndexHelper.IEntry) dax.get(index)).desc);
+            }
+            else {
+                IndexHelper.setName(src, files[0].getName());
+            }
+            if (((IndexHelper.SEntry) src).needRsz) {
+                dax.needRzCount--;
+            }
+            else {
+                dax.replaceCount--;
+            }
+        }
+        else {
+            IndexHelper.SEntry ka = new IndexHelper.SEntry(files[0]);
+            ka.isrep = true;
+            ka.isrc = src;
+            ka.code = 0x42494e00;
+            ka.modifier |= IndexHelper.UNK | BasicFile.TYPE_BIN;
+            src = ka;
+        }
+        index = dax.getRealIndex(index);
+        final boolean fl = dax.useFlatOPath;
+        try {
+            Pkg_box a = dax.getRoot();
+            dax.useFlatOPath = true;
+            IndexHelper.IEntry ost = dax.getIEntry();
+            final int[] pa = dax.getPath();
+            final int sz = dax.level;
+            dum:
+            for (int i = 0; i < sz; i++) {
+                ost = ost.get(pa[i]);
+                for (BasicFile b : a.forParsers()) {
+                    if (b.isValidCode(ost.code)) {
+                        a = (Pkg_box) b;
+                        continue dum;
+                    }
+                }
+                throw new RuntimeException();
+            }
+            a.offsets = dax.getPIEntry().offs;
+
+            ((IndexHelper.SEntry) src).needRsz = files[0].length() > a.genMax(a.sizeOf(index), index);
+            if (((IndexHelper.SEntry) src).needRsz) {
+                dax.needRzCount++;
+            }
+            else {
+                dax.replaceCount++;
+            }
+        }
+        finally {
+            dax.useFlatOPath = fl;
+        }
+        oe.set(index, src);
         return true;
     }
 

@@ -5,6 +5,7 @@
 package main_app.swing;
 
 import com.DeltaSKR.IO.interfce.IOSys;
+import com.DeltaSKR.IO.interfce.RndAccess;
 import com.DeltaSKR.IO.interfce.WriteSeek;
 import com.sgucore.MainApp;
 import com.sgucore.data.AFS;
@@ -14,6 +15,7 @@ import java.awt.Cursor;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.io.IOException;
 import javax.swing.AbstractAction;
 import javax.swing.AbstractButton;
 import javax.swing.Action;
@@ -47,15 +49,78 @@ public class MainGui extends javax.swing.JFrame {
             case 'D':
 
                 break;
-            case 'I':
-
-                break;
             case 'C':
 
                 break;
-            case 'E':
+            case 'I':
 
                 break;
+            case 'T': {
+                final PkgCtrl cat = (PkgCtrl) jTabbedPane1.getSelectedComponent();
+                try {
+                    cas.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+                    if (cas.showSaveDialog(MainGui.this) != JFileChooser.APPROVE_OPTION) {
+                        return;
+                    }
+                }
+                finally {
+                    cas.setFileSelectionMode(JFileChooser.FILES_ONLY);
+                }
+                final File op = cas.getSelectedFile();
+                new Thread() {
+                    @Override
+                    public void run()
+                    {
+                        boolean c = cat.ax.useFlatOPath;
+                        RndAccess su = null;
+                        try {
+                            cat.ax.useFlatOPath = true;
+                            int[] cc = cat.ax.getSelecteds();
+                            int ss = cat.ax.level;
+                            int[] pat = cat.ax.getPath();
+                            su = IOSys.openRandom(cat.stc, true);
+                            Pkg_box so = cat.ax.getRoot();
+                            so.jindex = cat.ax.getIEntry();
+                            so.setIO(su);
+                            if (!so.isValid(-1)) {
+                                SwingUtilities.invokeLater(new Runnable() {
+                                    @Override
+                                    public void run()
+                                    {
+                                        StatusMessage.setText("Error cant open file");
+                                    }
+
+                                });
+                                return;
+                            }
+                            so.export(op.getPath(), false, cc, pat, ss, true);
+                            SwingUtilities.invokeLater(new Runnable() {
+                                @Override
+                                public void run()
+                                {
+                                    StatusMessage.setText("Export done!");
+                                }
+
+                            });
+                        }
+                        catch (IOException ex) {
+                        }
+                        finally {
+                            if (su != null) {
+                                try {
+                                    su.close();
+                                }
+                                catch (IOException iOException) {
+                                }
+                            }
+                            cat.ax.useFlatOPath = c;
+                        }
+
+                    }
+
+                }.start();
+            }
+            break;
             case 'G': {
                 PkgCtrl cat = (PkgCtrl) jTabbedPane1.getSelectedComponent();
                 String osk = JOptionPane.showInputDialog("Write a new VDIR name");
@@ -167,7 +232,7 @@ public class MainGui extends javax.swing.JFrame {
         jMenuItem7 = new javax.swing.JMenuItem();
         jMenuItem1 = new javax.swing.JMenuItem();
         jMenuItem2 = new javax.swing.JMenuItem();
-        jMenuItem3 = new javax.swing.JMenuItem();
+        jMenuItem4 = new javax.swing.JMenuItem();
         jMenu2 = new javax.swing.JMenu();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
@@ -196,8 +261,6 @@ public class MainGui extends javax.swing.JFrame {
         jProgressBar1.setName(""); // NOI18N
         jProgressBar1.setPreferredSize(new java.awt.Dimension(146, 20));
         jPanel2.add(jProgressBar1, java.awt.BorderLayout.WEST);
-
-        StatusMessage.setText("jLabel1");
         jPanel2.add(StatusMessage, java.awt.BorderLayout.CENTER);
 
         getContentPane().add(jPanel2, java.awt.BorderLayout.SOUTH);
@@ -238,9 +301,15 @@ public class MainGui extends javax.swing.JFrame {
         });
         jMenu1.add(jMenuItem2);
 
-        jMenuItem3.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_S, java.awt.event.InputEvent.SHIFT_DOWN_MASK | java.awt.event.InputEvent.CTRL_DOWN_MASK));
-        jMenuItem3.setText("Save As");
-        jMenu1.add(jMenuItem3);
+        jMenuItem4.setText("Apply replaces");
+        jMenuItem4.addActionListener(new java.awt.event.ActionListener()
+        {
+            public void actionPerformed(java.awt.event.ActionEvent evt)
+            {
+                jMenuItem4ActionPerformed(evt);
+            }
+        });
+        jMenu1.add(jMenuItem4);
 
         jMenuBar1.add(jMenu1);
 
@@ -308,6 +377,7 @@ public class MainGui extends javax.swing.JFrame {
                     }
                     jTabbedPane1.add(as.getName(), new PkgCtrl(as, res, jPopupMenu1));
                     jTabbedPane1.setToolTipTextAt(jTabbedPane1.getTabCount() - 1, as.getPath());
+                    jTabbedPane1.setSelectedIndex(jTabbedPane1.getTabCount() - 1);
                 }
 
             }.start();
@@ -323,6 +393,7 @@ public class MainGui extends javax.swing.JFrame {
         jTabbedPane1.add("New File " + jTabbedPane1.getTabCount(),
                 new PkgCtrl(null, new Object[]{new AFS(null), it}, jPopupMenu1)
         );
+        jTabbedPane1.setSelectedIndex(jTabbedPane1.getTabCount()-1);
     }//GEN-LAST:event_jMenuItem1ActionPerformed
 
     private void jMenuItem2ActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_jMenuItem2ActionPerformed
@@ -452,6 +523,70 @@ public class MainGui extends javax.swing.JFrame {
         }.start();
     }//GEN-LAST:event_jMenuItem2ActionPerformed
 
+    private void jMenuItem4ActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_jMenuItem4ActionPerformed
+    {//GEN-HEADEREND:event_jMenuItem4ActionPerformed
+        if (jTabbedPane1.getSelectedComponent() == null) {
+            return;
+        }
+        StatusMessage.setText("Apply replaces...");
+        final int tim = jTabbedPane1.getSelectedIndex();
+        final PkgCtrl ca = (PkgCtrl) jTabbedPane1.getSelectedComponent();
+        if (ca.ax.replaceCount < 1) {
+            StatusMessage.setText("Nothing to apply");
+            return;
+        }
+        final File[] old = {ca.stc};
+        jProgressBar1.setIndeterminate(true);
+        new Thread() {
+            @Override
+            public void run()
+            {
+                try {
+                    IndexHelper.IEntry rups = ca.ax.getIEntry();
+                    Pkg_box root = ca.ax.getRoot();
+                    try {
+                        root.setIO(IOSys.openRandom(old[0], false));
+                        root.jindex = rups;
+                        if (!root.isValid(-1)) {
+                            JOptionPane.showMessageDialog(MainGui.this, "ERROR: Cant parse the original data");
+                            return;
+                        }
+                        try {
+                            ca.ax.applyReplaceChanges();
+                        }
+                        finally {
+                            if (root.getFi() != null) {
+                                root.getFi().close();
+                            }
+                        }
+                        root.offsets = null;
+                        SwingUtilities.invokeLater(new Runnable() {
+                            @Override
+                            public void run()
+                            {
+                                ca.jTable1.updateUI();
+                                jTabbedPane1.setTitleAt(tim, ca.stc.getName());
+                                jTabbedPane1.setToolTipTextAt(tim, ca.stc.getPath());
+                                StatusMessage.setText("Apply done!");
+                            }
+
+                        });
+                    }
+                    catch (Exception ex) {
+                        ex.printStackTrace();
+                        JOptionPane.showMessageDialog(MainGui.this, "Error:" + ex.getMessage());
+                    }
+                }
+                finally {
+                    System.out.println("END Apply opration");
+                    jProgressBar1.setIndeterminate(false);
+                    jProgressBar1.setValue(100);
+                }
+            }
+
+        }.start();
+    }//GEN-LAST:event_jMenuItem4ActionPerformed
+
     /**
      * @param args the command line arguments
      */
@@ -500,7 +635,7 @@ public class MainGui extends javax.swing.JFrame {
     private javax.swing.JMenuBar jMenuBar1;
     private javax.swing.JMenuItem jMenuItem1;
     private javax.swing.JMenuItem jMenuItem2;
-    private javax.swing.JMenuItem jMenuItem3;
+    private javax.swing.JMenuItem jMenuItem4;
     private javax.swing.JMenuItem jMenuItem7;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
